@@ -1,0 +1,9 @@
+# Copy to .dev.vars for `wrangler dev` (.dev.vars is gitignored).
+# In production these are set with `wrangler secret put <NAME>`.
+
+LOGIN_PASSWORD="choose-a-strong-shared-password"
+WP_APP_USER="mcp-bot"
+WP_APP_PASSWORD="xxxx xxxx xxxx xxxx xxxx xxxx"
+
+# WP_MCP_URL is set in wrangler.jsonc vars; override locally if needed:
+# WP_MCP_URL="https://www.igamingrepublic.com/wp-json/mcp/mcp-adapter-default-server"

@@ -1,0 +1,21 @@
+{
+  "name": "igamingrepublic-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OAuth-gated remote MCP server (Cloudflare Worker) that proxies to the igamingrepublic WordPress Abilities API.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "^0.2.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250620.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.20.0"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "igamingrepublic-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+
+  // Required: the OAuth provider's token encryption / PKCE primitives rely on
+  // node:crypto-backed APIs that Node compat enables.
+  "compatibility_flags": ["nodejs_compat"],
+
+  "observability": { "enabled": true },
+
+  // The OAuth provider stores clients, grants and tokens here.
+  // Create with: npx wrangler kv namespace create OAUTH_KV
+  // then paste the returned id below.
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "<PASTE_ID_FROM_kv_namespace_create>"
+    }
+  ],
+
+  // Non-secret config. The upstream WordPress mcp-adapter Streamable HTTP endpoint.
+  "vars": {
+    "WP_MCP_URL": "https://www.igamingrepublic.com/wp-json/mcp/mcp-adapter-default-server"
+  }
+
+  // === SECRETS (set via `wrangler secret put`, do NOT put in vars) ===
+  //   LOGIN_PASSWORD   -> shared consent-screen password (the only human secret)
+  //   WP_APP_USER      -> WordPress username of the dedicated Editor-role user
+  //   WP_APP_PASSWORD  -> that user's Application Password ("xxxx xxxx xxxx ...")
+  //
+  // No Durable Objects, no [[migrations]], no D1, no queues.
+}
