@@ -16,7 +16,7 @@
   "kv_namespaces": [
     {
       "binding": "OAUTH_KV",
-      "id": "<PASTE_ID_FROM_kv_namespace_create>"
+      "id": "69b87fc1ab8a458e809972c983b2f1b7"
     }
   ],
 
