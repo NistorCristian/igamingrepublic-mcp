@@ -119,11 +119,23 @@ const proxyHandler = {
       return jsonRpcError(-32001, "Upstream request to WordPress failed");
     }
 
-    // Visible in `wrangler tail` / dashboard Logs so we can see the real status.
+    // Diagnostic: capture what WordPress actually returned. Clone so we can
+    // read the (small handshake) body for logging while still streaming the
+    // original back. Skip cloning SSE so we never buffer a live stream.
+    const ct = upstream.headers.get("content-type") ?? "?";
+    let respSnippet = "";
+    if (!ct.includes("text/event-stream")) {
+      try {
+        respSnippet = (await upstream.clone().text()).slice(0, 300);
+      } catch {
+        respSnippet = "<unreadable>";
+      }
+    }
     console.log(
-      `proxy: ${request.method} [${rpc}] -> ${upstream.status} ` +
-        `ct=${upstream.headers.get("content-type") ?? "?"} ` +
-        `sid=${upstream.headers.get("mcp-session-id") ?? "-"}`,
+      `proxy: ${request.method} [${rpc}] reqBodyLen=${body ? body.byteLength : 0} ` +
+        `-> ${upstream.status} ct=${ct} ` +
+        `sid=${upstream.headers.get("mcp-session-id") ?? "-"} ` +
+        `resp=${JSON.stringify(respSnippet)}`,
     );
 
     // Stream the response body straight back — identical for JSON and text/event-stream.
