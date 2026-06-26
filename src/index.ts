@@ -91,6 +91,19 @@ const proxyHandler = {
       body = buf.byteLength > 0 ? buf : undefined;
     }
 
+    // Peek at the JSON-RPC method/id purely for diagnostic logging.
+    let rpc = "(no body)";
+    if (body) {
+      try {
+        const p = JSON.parse(new TextDecoder().decode(body));
+        rpc = Array.isArray(p)
+          ? `batch[${p.length}]`
+          : `${p?.method ?? "?"} id=${JSON.stringify(p?.id)}`;
+      } catch {
+        rpc = "<non-json>";
+      }
+    }
+
     let upstream: Response;
     try {
       upstream = await fetch(env.WP_MCP_URL, {
@@ -100,16 +113,18 @@ const proxyHandler = {
         redirect: "manual",
       });
     } catch (err) {
-      console.error("proxy: upstream fetch threw", {
-        method: request.method,
-        url: env.WP_MCP_URL,
+      console.error(`proxy: upstream fetch threw for ${request.method} ${rpc}`, {
         error: err instanceof Error ? err.message : String(err),
       });
       return jsonRpcError(-32001, "Upstream request to WordPress failed");
     }
 
     // Visible in `wrangler tail` / dashboard Logs so we can see the real status.
-    console.log(`proxy: ${request.method} ${env.WP_MCP_URL} -> ${upstream.status}`);
+    console.log(
+      `proxy: ${request.method} [${rpc}] -> ${upstream.status} ` +
+        `ct=${upstream.headers.get("content-type") ?? "?"} ` +
+        `sid=${upstream.headers.get("mcp-session-id") ?? "-"}`,
+    );
 
     // Stream the response body straight back — identical for JSON and text/event-stream.
     const respHeaders = new Headers();
