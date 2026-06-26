@@ -82,6 +82,17 @@ const proxyHandler = {
       "Basic " + base64(`${env.WP_APP_USER}:${env.WP_APP_PASSWORD}`),
     );
 
+    // Present a realistic browser identity. The Worker's egress is a Cloudflare
+    // datacenter IP and it otherwise sends no User-Agent, which trips host-level
+    // anti-bot filters (e.g. SiteGround's sgcaptcha challenge). This won't defeat
+    // pure IP-reputation blocking, but removes the bare-bot signal.
+    outHeaders.set(
+      "user-agent",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    );
+    outHeaders.set("accept-language", "en-US,en;q=0.9");
+
     // Buffer the (small) JSON-RPC request body rather than streaming it. This
     // avoids duplex/half-stream pitfalls and "body already used" errors if the
     // OAuth layer touched the request. The RESPONSE is still streamed (for SSE).
