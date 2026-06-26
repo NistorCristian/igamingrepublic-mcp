@@ -82,17 +82,34 @@ const proxyHandler = {
       "Basic " + base64(`${env.WP_APP_USER}:${env.WP_APP_PASSWORD}`),
     );
 
-    // Stream method + body through (no buffering): large JSON-RPC payloads and
-    // SSE both work without materializing in memory.
-    const init: RequestInit & { duplex?: "half" } = {
-      method: request.method,
-      headers: outHeaders,
-      body: request.method === "GET" ? undefined : request.body,
-      duplex: "half", // required by the Workers runtime to stream a request body
-      redirect: "manual",
-    };
+    // Buffer the (small) JSON-RPC request body rather than streaming it. This
+    // avoids duplex/half-stream pitfalls and "body already used" errors if the
+    // OAuth layer touched the request. The RESPONSE is still streamed (for SSE).
+    let body: ArrayBuffer | undefined;
+    if (request.method !== "GET") {
+      const buf = await request.arrayBuffer();
+      body = buf.byteLength > 0 ? buf : undefined;
+    }
 
-    const upstream = await fetch(env.WP_MCP_URL, init);
+    let upstream: Response;
+    try {
+      upstream = await fetch(env.WP_MCP_URL, {
+        method: request.method,
+        headers: outHeaders,
+        body,
+        redirect: "manual",
+      });
+    } catch (err) {
+      console.error("proxy: upstream fetch threw", {
+        method: request.method,
+        url: env.WP_MCP_URL,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return jsonRpcError(-32001, "Upstream request to WordPress failed");
+    }
+
+    // Visible in `wrangler tail` / dashboard Logs so we can see the real status.
+    console.log(`proxy: ${request.method} ${env.WP_MCP_URL} -> ${upstream.status}`);
 
     // Stream the response body straight back — identical for JSON and text/event-stream.
     const respHeaders = new Headers();
@@ -113,6 +130,14 @@ const proxyHandler = {
 /** base64 of a UTF-8 string, Workers-safe. */
 function base64(input: string): string {
   return btoa(String.fromCharCode(...new TextEncoder().encode(input)));
+}
+
+/** Minimal JSON-RPC error envelope for proxy-level failures. */
+function jsonRpcError(code: number, message: string): Response {
+  return new Response(
+    JSON.stringify({ jsonrpc: "2.0", error: { code, message }, id: null }),
+    { status: 502, headers: { "content-type": "application/json" } },
+  );
 }
 
 function preflight(request: Request): Response {
